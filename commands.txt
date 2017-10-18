@@ -1,0 +1,195 @@
+== COMMANDS ==
+
+    no op
+!   factorial
+"   string characters
+#   output a number
+$   drop top of stack
+%   modulo of top two
+&   bitwise and
+'   push character with next char code 
+(   while TOS
+)   end while
+*   multipliy
++   add
+,   swap top two
+-   subtract
+.   divmod
+/   divide
+0   push 0
+1   push 1
+2   push 2
+3   push 3
+4   push 4
+5   push 5
+6   push 6
+7   push 7
+8   push 8
+9   push 9
+:   duplicate
+;   duplicate 2nd to top
+<   less than
+=   equal to
+>   greater than
+?   random number between 0 and N-1
+@   rotate top three: [... A B C] => [... C A B]
+A   push 10
+B   push 11
+C   push 12
+D   push 13
+E   push 14
+F   push 15
+G   push 64
+H   push 256
+I   push 100
+J   push 1000
+K   pop N; duplicate top N; [... 8 6 9 3] => [... 8 6 9 8 6 9]
+L   flush the stack
+M   cbrt
+N   sqrt
+O   output stack, separated by newlines
+P   set input base
+Q   set output base
+R   pop N; reverse top N members
+S   push 16
+T   concatenate digits
+U   pop N; push bits of N
+V   pop N; push base output digits of N
+W   pop S then N; output top N characters to stream S
+X   triplicate N
+Y   pop N; push the numbers from 0 to N-1
+Z   move top to bottom
+[   pop N; move top N items to a new stack
+\   reverse stack
+]   move current stack to old stack
+^   bitwise xor
+_   negation
+`   exponentiation
+a   pop N, K; flips the Kth bit in N
+b   pop N; copy Nth item of stack
+c   pop N; move Nth item of stack
+d   isolate top member of stack
+e   extended functions
+f   store to next variable
+g   recall next variable
+h   read input as number.
+i   read line of input as charcodes; the first character in the line is the top of the stack
+j   push a character of input (-1 = eof)
+k   pop N; pop top N
+l   push length of stack
+m   cube
+n   square
+o   output char code N
+p   push input base
+q   push output base
+r   push number of sub-stacks
+s   pop N; output string with N char codes
+t   push to next register
+u   pop from next register
+v   treat the stack as a base 2 number
+w   treat the stack as a base <output base> number
+x   pop N; pop K; push K N times
+y   pop N; push all the numbers from -N to N
+z   move bottom to top
+{   if tos
+|   bitwise or
+}   end if
+~   bitwise negate
+
+## extended characters
+
+e    
+e!   logical negation
+e"   
+e#   output a number with newline
+e$   
+e%   
+e&   
+e'   
+e(   
+e)   
+e*   
+e+   
+e,   
+e-   
+e.   
+e/   
+e0   
+e1   
+e2   
+e3   
+e4   
+e5   
+e6   
+e7   
+e8   
+e9   
+e:   
+e;   
+e<   greater-than-or-equal-to
+e=   less-than-or-equal-to
+e>   not equal to
+e?   
+e@   
+eA   char: is alphabetic?
+eB   
+eC   char: to uppercase
+eD   
+eE   
+eF   
+eG   
+eH   
+eI   
+eJ   
+eK   
+eL   
+eM   
+eN   
+eO   
+eP   
+eQ   
+eR   
+eS   
+eT   
+eU   
+eV   
+eW   
+eX   
+eY   
+eZ   
+e[   
+e\   comment until EOL
+e]   
+e^   
+e_   
+e`   
+ea   
+eb   
+ec   char: to lowercase
+ed   
+ee   0 if stdin is empty
+ef   
+eg   
+eh   
+ei   read all of stdin as numbers
+ej   
+ek   
+el   
+em   push a stack address
+en   pop address, N; push top N members to address
+eo   display stack from address
+ep   push TOS to STOS address
+eq   pop from TOS address
+er   
+es   
+et   
+eu   
+ev   
+ew   
+ex   
+ey   
+ez   
+e{   
+e|   
+e}   
+e~   terminate program with exit code
