@@ -16,7 +16,11 @@
 
 #define INITIAL_STACK_CAPACITY (16)
 #define eprintf(...) fprintf(stderr, __VA_ARGS__)
-
+#ifdef __x86_64__
+    #define INT64_TO_PTR(x)(STACK*)x
+#else
+    #define INT64_TO_PTR(x)(STACK*)(int)x
+#endif
 // #define printf(...) printf("\x1b[33m[%s::%i]\x1b[0m ", __FUNCTION__, __LINE__);printf(__VA_ARGS__)
 
 typedef struct STACK {
@@ -92,6 +96,7 @@ int stack_unshift(STACK* stk, int64_t val) {
     }
     memmove(stk->data + 1, stk->data, stk->size * sizeof(int64_t));
     stk->data[0] = val;
+    return 1;
 }
 
 int64_t stack_pop(STACK* stk) {
@@ -676,11 +681,11 @@ void OML_exec_cmd(OML* inst, char cur) {
         stack_push(res, top);
     }
     else if(cur == 'f') {
-        char ident = inst->code[++inst->i];
+        unsigned char ident = inst->code[++inst->i];
         inst->vars[ident] = stack_pop(res);
     }
     else if(cur == 'g') {
-        char ident = inst->code[++inst->i];
+        unsigned char ident = inst->code[++inst->i];
         stack_push(res, inst->vars[ident]);
     }
     else if(cur == 'h') {
@@ -749,13 +754,13 @@ void OML_exec_cmd(OML* inst, char cur) {
     }
     
     else if(cur == 't') {
-        char ident = inst->code[++inst->i];
+        unsigned char ident = inst->code[++inst->i];
         STACK* reg = &inst->reg_stk[ident];
         stack_push(reg, stack_pop(res));
     }
     
     else if(cur == 'u') {
-        char ident = inst->code[++inst->i];
+        unsigned char ident = inst->code[++inst->i];
         STACK* reg = &inst->reg_stk[ident];
         stack_push(res, stack_pop(reg));
     }
@@ -798,9 +803,9 @@ void OML_exec_cmd(OML* inst, char cur) {
         stack_push(res, ~a);
     }
     
-    // extended function
+    // extended function6
     else if(cur == 'e') {
-        char ident = inst->code[++inst->i];
+        unsigned char ident = inst->code[++inst->i];
         if(ident == '!') {
             int64_t a = stack_pop(res);
             stack_push(res, !a);
@@ -859,7 +864,7 @@ void OML_exec_cmd(OML* inst, char cur) {
         }
         else if(ident == 'n') {
             int64_t n = stack_pop(res);
-            STACK* tmp = (STACK*)(int) stack_pop(res);
+            STACK* tmp = INT64_TO_PTR(stack_pop(res));
             for(int64_t c = n; c > 0; --c) {
                 stack_push(tmp, res->data[res->size - c]);
             }
@@ -869,7 +874,7 @@ void OML_exec_cmd(OML* inst, char cur) {
             stack_push(res, (int) tmp);
         }
         else if(ident == 'o') {
-            STACK* tmp = (STACK*)(int) stack_peek(res);
+            STACK* tmp = INT64_TO_PTR(stack_peek(res));
             stack_display(*tmp);
         }
         else if(ident == 'p') {
