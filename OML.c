@@ -222,10 +222,6 @@ int64_t isqrt(int64_t num) {
     return res;
 }
 
-int OUTPUT_BASE = 10;
-int INPUT_BASE = 10;
-char ALPHABET[] = "0123456789abcdefghijklmnopqrstuvwxyz";
-
 int is_power(int64_t num, int64_t base) {
     while(num % base == 0)
         num /= base;

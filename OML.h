@@ -23,6 +23,10 @@ typedef struct OML {
     size_t i, size, sub_stk_size;
 } OML;
 
+int     OUTPUT_BASE = 10;
+int     INPUT_BASE  = 10;
+char    ALPHABET[]  = "0123456789abcdefghijklmnopqrstuvwxyz";
+
 /* stack methods */
 STACK   stack_init              (void);
 STACK   stack_from              (STACK);
