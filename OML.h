@@ -24,47 +24,46 @@ typedef struct OML {
 } OML;
 
 /* stack methods */
-STACK stack_init(void);
-void    stack_destory           (STACK*);
-void    stack_display           (STACK);
-void    stack_push_int_array    (STACK*, int64_t*, size_t);
-void    stack_clear             (STACK*);
-int     stack_resize            (STACK*);
+STACK   stack_init              (void);
+STACK   stack_from              (STACK);
 int     stack_push              (STACK*, int64_t);
+int     stack_resize            (STACK*);
 int     stack_unshift           (STACK*, int64_t);
+void    stack_display           (STACK);
+void    stack_clear             (STACK*);
+void    stack_destory           (STACK*);
+void    stack_push_int_array    (STACK*, int64_t*, size_t);
 int64_t stack_pop               (STACK*);
 int64_t stack_shift             (STACK*);
 int64_t stack_pop_from          (STACK*, size_t);
 int64_t stack_peek              (STACK*);
-STACK   stack_from              (STACK);
 
 /* generic function */
-char* read_file(char*, size_t*);
-
-bool    stdin_remaining (void);
 void    show_help       (char*);
+bool    stdin_remaining (void);
+char*   read_file       (char*, size_t*);
 
 #define to_output_base(a, b) to_base(a, OUTPUT_BASE, b)
-int64_t     random_between  (int64_t, int64_t);
-int64_t     factorial       (int64_t);
+int         is_power        (int64_t, int64_t);
+int64_t     ipow            (int64_t, int64_t);
 int64_t     icbrt           (int64_t);
 int64_t     isqrt           (int64_t);
-int64_t     ipow            (int64_t, int64_t);
+int64_t     factorial       (int64_t);
+int64_t     random_between  (int64_t, int64_t);
 int64_t*    to_base         (int64_t, int64_t, size_t*);
-int         is_power        (int64_t, int64_t);
 
-void    print_int           (int64_t);
-int64_t input_int           (void);
 int     is_valid_in_char    (int);
 int     char_to_in_digit    (int);
+void    print_int           (int64_t);
 double  fpart               (double);
+int64_t input_int           (void);
 
 /* OML functions */
-void    OML_exec_cmd        (OML*, char);
-void    OML_run             (OML*);
-void    OML_exec_str        (OML*, char*);
-void    OML_exec_str_args   (OML*, char*, size_t, ...);
-void    OML_diagnostic      (OML*);
 OML     OML_init            (char*, size_t);
 OML     OML_exec            (char*, size_t);
+void    OML_run             (OML*);
+void    OML_diagnostic      (OML*);
+void    OML_exec_cmd        (OML*, char);
+void    OML_exec_str_args   (OML*, char*, size_t, ...);
+void    OML_exec_str        (OML*, char*);
 #endif
