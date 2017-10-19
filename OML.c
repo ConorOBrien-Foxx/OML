@@ -11,16 +11,12 @@
 #include <ctype.h>      /* for isalpha, isalnum, etc. */
 #include <stdbool.h>    /* for true, false, bool */
 
-#include "twister.h" /* for randomMT */
+// #include "twister.h" /* for randomMT */
+#include "xoroshiro128plus.c" /* for next */
 #include "msdelay.h" /* for ms_delay */
 
 #define INITIAL_STACK_CAPACITY (16)
 #define eprintf(...) fprintf(stderr, __VA_ARGS__)
-#ifdef __x86_64__
-    #define INT64_TO_PTR(x)(STACK*)x
-#else
-    #define INT64_TO_PTR(x)(STACK*)(int)x
-#endif
 // #define printf(...) printf("\x1b[33m[%s::%i]\x1b[0m ", __FUNCTION__, __LINE__);printf(__VA_ARGS__)
 
 typedef struct STACK {
@@ -152,7 +148,8 @@ bool stdin_remaining() {
 }
 
 int64_t random_between(int64_t lower, int64_t upper) {
-    double scale = randomMT() * 1.0 / UINT_MAX;
+    uint64_t rand_val = next();
+    double scale = rand_val * 1.0 / UINT64_MAX;
     return (int64_t)(scale * (upper - lower)) + lower;
 }
 
@@ -622,7 +619,7 @@ void OML_exec_cmd(OML* inst, char cur) {
         // inst->stk_stk
         int64_t count = stack_pop(res);
         size_t size = res->size;
-        for(int64_t i = 0; i < size - count; i++) {
+        for(size_t i = 0; i < size - count; i++) {
             stack_push(&inst->stk_stk, stack_shift(res));
         }
         stack_push(&inst->stk_stk, size - count);
@@ -860,34 +857,34 @@ void OML_exec_cmd(OML* inst, char cur) {
         else if(ident == 'm') {
             STACK* addr = malloc(sizeof(addr));
             *addr = stack_init();
-            stack_push(res, (int)addr);
+            stack_push(res, (intptr_t) addr);
         }
         else if(ident == 'n') {
             int64_t n = stack_pop(res);
-            STACK* tmp = INT64_TO_PTR(stack_pop(res));
+            STACK* tmp = (STACK*)(intptr_t) stack_pop(res);
             for(int64_t c = n; c > 0; --c) {
                 stack_push(tmp, res->data[res->size - c]);
             }
             for(int64_t c = n; c > 0; --c) {
                 stack_pop(res);
             }
-            stack_push(res, (int) tmp);
+            stack_push(res, (intptr_t) tmp);
         }
         else if(ident == 'o') {
-            STACK* tmp = INT64_TO_PTR(stack_peek(res));
+            STACK* tmp = (STACK*)(intptr_t) stack_peek(res);
             stack_display(*tmp);
         }
         else if(ident == 'p') {
             int64_t n = stack_pop(res);
-            STACK* tmp = (STACK*)(int) stack_pop(res);
-            stack_push(res, (int) tmp);
+            STACK* tmp = (STACK*)(intptr_t) stack_pop(res);
+            stack_push(res, (intptr_t) tmp);
             stack_push(tmp, n);
         }
         else if(ident == 'q') {
-            STACK* tmp = (STACK*)(int) stack_pop(res);
+            STACK* tmp = (STACK*)(intptr_t) stack_pop(res);
             int64_t n = stack_pop(tmp);
             stack_push(res, n);
-            stack_push(res, (int) tmp);
+            stack_push(res, (intptr_t) tmp);
         }
         else if(ident == '~') {
             exit(stack_pop(res));
@@ -989,7 +986,7 @@ int main(int argc, char** argv) {
         prog_len = strlen(prog);
     }
     srand(ms_delay());
-    seedMT(rand());
+    seed(rand(), rand());
     OML res;
     if(over_numbers) {
         res = OML_init(prog, prog_len);
