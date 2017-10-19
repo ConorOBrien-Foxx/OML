@@ -82,7 +82,7 @@ n   square
 o   output char code N
 p   push input base
 q   push output base
-r   push number of sub-stacks
+r   push number of sub-stacks (depth)
 s   pop N; output string with N char codes
 t   push to next register
 u   pop from next register
@@ -106,7 +106,7 @@ e$
 e%   
 e&   
 e'   
-e(   
+e(   reduce stack over inside
 e)   
 e*   
 e+   
@@ -127,14 +127,14 @@ e9
 e:   
 e;   
 e<   greater-than-or-equal-to
-e=   less-than-or-equal-to
-e>   not equal to
+e=   equal to
+e>   less-than-or-equal-to
 e?   
 e@   
 eA   char: is alphabetic?
 eB   
 eC   char: to uppercase
-eD   
+eD   output as decimal with N digits of precision
 eE   
 eF   
 eG   
@@ -166,7 +166,7 @@ e`
 ea   
 eb   
 ec   char: to lowercase
-ed   
+ed   input decimal double; push integer form and precision
 ee   0 if stdin is empty
 ef   
 eg   
@@ -189,7 +189,7 @@ ew
 ex   
 ey   
 ez   
-e{   
+e{   map stack over inside
 e|   
 e}   
 e~   terminate program with exit code

@@ -2,27 +2,24 @@
 
 #include <stdio.h>      /* for printf */
 #include <stdlib.h>     /* for malloc, realloc */
-#include <inttypes.h>   /* for int64_t */
 #include <string.h>     /* for memcpy */
 #include <unistd.h>     /* for write */
 #include <time.h>       /* for time */
-#include <limits.h>     /* for UINT_MAX */
+#include <limits.h>     /* for UINT64_MAX */
 #include <math.h>       /* for log, pow */
 #include <ctype.h>      /* for isalpha, isalnum, etc. */
-#include <stdbool.h>    /* for true, false, bool */
+#include <stdarg.h>     /* for va_list, va_start, va_end, va_arg */
 
 // #include "twister.h" /* for randomMT */
+
 #include "xoroshiro128plus.c" /* for next */
-#include "msdelay.h" /* for ms_delay */
+#include "msdelay.h"          /* for ms_delay */
+
+#include "OML.h"
 
 #define INITIAL_STACK_CAPACITY (16)
 #define eprintf(...) fprintf(stderr, __VA_ARGS__)
 // #define printf(...) printf("\x1b[33m[%s::%i]\x1b[0m ", __FUNCTION__, __LINE__);printf(__VA_ARGS__)
-
-typedef struct STACK {
-    size_t capacity, size;
-    int64_t* data;
-} STACK;
 
 char* read_file(char* name, size_t* out_size) {
     FILE* file = fopen(name, "r");
@@ -142,7 +139,19 @@ void stack_clear(STACK* stk) {
     stk->size = 0;
 }
 
-bool stdin_remaining() {
+STACK stack_from(STACK stk) {
+    STACK res = stack_init();
+    res.size = stk.size;
+    res.capacity = stk.capacity;
+    for(size_t i = 0; i < res.size; i++) {
+        res.data[i] = stk.data[i];
+    }
+    // stack_resize(&res);
+    // memcpy(&res, &stk, res.size * sizeof(int64_t));
+    return res;
+}
+
+bool stdin_remaining(void) {
     ungetc(getchar(), stdin);
     return feof(stdin) == 0;
 }
@@ -241,8 +250,6 @@ int64_t* to_base(int64_t n, int64_t base, size_t* out_size) {
     }
     return temp;
 }
-
-#define to_output_base(a, b) to_base(a, OUTPUT_BASE, b)
 
 void print_int(int64_t n) {
     fflush(stdout);
@@ -344,14 +351,23 @@ int64_t input_int(void) {
     return ret;
 }
 
-typedef struct OML {
-    STACK stk;
-    STACK stk_stk;
-    STACK reg_stk[256];
-    int64_t vars[256];
-    char* code;
-    size_t i, size, sub_stk_size;
-} OML;
+double fpart(double d) {
+    int64_t integral = d;
+    return d - integral;
+}
+
+// modiifed from https://stackoverflow.com/a/101613/4119004
+int64_t ipow(int64_t base, int64_t exp) {
+    int64_t result = 1;
+    while(exp) {
+        if(exp & 1)
+            result *= base;
+        exp >>= 1;
+        base *= base;
+    }
+
+    return result;
+}
 
 void OML_exec_cmd(OML* inst, char cur) {
     STACK* res = &inst->stk;
@@ -656,6 +672,11 @@ void OML_exec_cmd(OML* inst, char cur) {
         int64_t a = stack_pop(res);
         stack_push(res, -a);
     }
+    else if(cur == '`') {
+        int64_t b = stack_pop(res);
+        int64_t a = stack_pop(res);
+        stack_push(res, ipow(a, b));
+    }
     else if(cur == 'a') {
         int64_t k = stack_pop(res);
         int64_t n = stack_pop(res);
@@ -761,7 +782,28 @@ void OML_exec_cmd(OML* inst, char cur) {
         STACK* reg = &inst->reg_stk[ident];
         stack_push(res, stack_pop(reg));
     }
-    
+    else if(cur == 'v') {
+        int64_t sum = 0;
+        size_t pos = 0;
+        while(pos < res->size) {
+            sum <<= 1;
+            sum += res->data[pos];
+            pos++;
+        }
+        res->size = 0;
+        stack_push(res, sum);
+    }
+    else if(cur == 'w') {
+        int64_t sum = 0;
+        size_t pos = 0;
+        while(pos < res->size) {
+            sum *= OUTPUT_BASE;
+            sum += res->data[pos];
+            pos++;
+        }
+        res->size = 0;
+        stack_push(res, sum);
+    }
     else if(cur == 'x') {
         int64_t repeater = stack_pop(res);
         int64_t repetend = stack_pop(res);
@@ -812,6 +854,33 @@ void OML_exec_cmd(OML* inst, char cur) {
             print_int(a);
             puts("");
         }
+        // reduce
+        else if(ident == '(') {
+            
+            size_t start = inst->i + 1, end = start;
+            // find end-point
+            int depth = 1;
+            while(depth && end < inst->size) {
+                if(inst->code[end] == '{')
+                    depth++;
+                else if(inst->code[end] == '}')
+                    depth--;
+                end++;
+            }
+            end--;
+            size_t res_size = end - start;
+            char* to_exec = malloc(res_size + 1);
+            to_exec[res_size] = '\0';
+            memcpy(to_exec, inst->code + start, res_size * sizeof(char));
+            
+            while(res->size) {
+                OML_exec_str_stk(inst, to_exec, res);
+            }
+            
+            inst->stk = stack_from(temp);
+            
+            inst->i = end;
+        }
         else if(ident == '<') {
             int64_t b = stack_pop(res);
             int64_t a = stack_pop(res);
@@ -840,9 +909,30 @@ void OML_exec_cmd(OML* inst, char cur) {
             int64_t n = stack_pop(res);
             stack_push(res, toupper(n));
         }
+        else if(ident == 'D') {
+            int64_t n = stack_pop(res);
+            int64_t num = stack_pop(res);
+            double divisor = 1;
+            while(n --> 0) {
+                divisor *= 10;
+            }
+            printf("%g", num / divisor);
+        }
         else if(ident == 'c') {
             int64_t n = stack_pop(res);
             stack_push(res, tolower(n));
+        }
+        else if(ident == 'd') {
+            double d;
+            scanf(" %lf", &d);
+            int64_t prec = 0;
+            while(fpart(d)) {
+                d *= 10;
+                prec++;
+            }
+            stack_push(res, d);
+            stack_push(res, prec);
+            
         }
         else if(ident == 'e') {
             // set read flag as a test
@@ -886,10 +976,95 @@ void OML_exec_cmd(OML* inst, char cur) {
             stack_push(res, n);
             stack_push(res, (intptr_t) tmp);
         }
+        // map
+        else if(ident == '{') {
+            STACK temp = stack_from(*res);
+            size_t start = inst->i + 1, end = start;
+            // find end-point
+            int depth = 1;
+            while(depth && end < inst->size) {
+                if(inst->code[end] == '{')
+                    depth++;
+                else if(inst->code[end] == '}')
+                    depth--;
+                end++;
+            }
+            end--;
+            size_t res_size = end - start;
+            char* to_exec = malloc(res_size + 1);
+            to_exec[res_size] = '\0';
+            memcpy(to_exec, inst->code + start, res_size * sizeof(char));
+            
+            for(size_t i = 0; i < temp.size; i++) {
+                res->size = 0;
+                int64_t arg = temp.data[i];
+                OML_exec_str_args(inst, to_exec, 1, arg);
+                temp.data[i] = stack_pop(res);
+            }
+            
+            inst->stk = stack_from(temp);
+            
+            inst->i = end;
+        }
         else if(ident == '~') {
             exit(stack_pop(res));
         }
     }
+}
+
+void OML_run(OML* inst) {
+    while(inst->i < inst->size) {
+        char cur = inst->code[inst->i];
+        OML_exec_cmd(inst, cur);
+        inst->i++;
+    }
+    inst->i = 0;
+}
+
+void OML_diagnostic(OML* inst) {
+    printf(COLOR_HEADER("[START INSTANCE %p]") "\n", inst);
+    printf(COLOR_SUB_HEADER("(CODE)") "\n");
+    printf(COLOR_CODE("  %s") "\n  ", inst->code);
+    for(size_t i = 0; i < inst->i; i++) {
+        putchar('-');
+    }
+    printf("^ (%u)\n", inst->i);
+    printf(COLOR_SUB_HEADER("(STACK, size = %u)") "\n", inst->stk.size);
+    stack_display(inst->stk);
+    printf(COLOR_HEADER("[END INSTANCE %p]") "\n", inst);
+}
+
+void OML_exec_str_args(OML* inst, char* str, size_t argc, ...) {
+    va_list args;
+    va_start(args, argc);
+    OML temp = *inst;
+    inst->stk = stack_init();
+    inst->stk_stk = stack_init();
+    inst->code = str;
+    inst->size = strlen(str);
+    inst->sub_stk_size = 0;
+    inst->i = 0;
+    // registers can stay
+    // initialize stack with args
+    for(size_t i = 0; i < argc; i++) {
+        int64_t n = va_arg(args, int64_t);
+        stack_push(&inst->stk, n);
+    }
+    OML_run(inst);
+    for(size_t i = 0; i < inst->stk.size; i++) {
+        stack_push(&temp.stk, inst->stk.data[i]);
+    }
+    // inst->code = temp.code;
+    // inst->stk = temp.stk;
+    // inst->i = temp.i;
+    *inst = temp;
+}
+
+void OML_exec_str(OML* inst, char* str) {
+    // printf("EXECUTING: `%s`\n", str);
+    // preserve old information
+    // OML_diagnostic(inst);
+    OML_exec_str_args(inst, str, 0);
 }
 
 OML OML_init(char* str, size_t size) {
@@ -906,24 +1081,11 @@ OML OML_init(char* str, size_t size) {
     return inst;
 }
 
-void OML_run(OML* inst) {
-    while(inst->i < inst->size) {
-        char cur = inst->code[inst->i];
-        OML_exec_cmd(inst, cur);
-        inst->i++;
-    }
-    inst->i = 0;
-}
-
 OML OML_exec(char* str, size_t size) {
     OML inst = OML_init(str, size);
     OML_run(&inst);
     return inst;
 }
-
-#define COLOR_RESET  "\x1b[0m"
-#define COLOR_HEADER(x) "\x1b[33m" x COLOR_RESET
-#define COLOR_CODE(x) "\x1b[1;34m" x COLOR_RESET
 
 void show_help(char* file_name) {
     eprintf("[[ OML - Ordinal Manipulation Language ]]\n");
