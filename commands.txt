@@ -146,7 +146,7 @@ eL
 eM   
 eN   
 eO   
-eP   
+eP   detects prime
 eQ   
 eR   
 eS   

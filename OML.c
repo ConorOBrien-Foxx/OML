@@ -372,10 +372,11 @@ int64_t input_int(void) {
         int sign = -1;
         
         if(INPUT_BASE < 9) {
-            strcpy(format, " -[0-?]");
+            strcpy(format, " -%[0-?]");
             //              0123456
             // update the question mark
-            format[5] = ALPHABET[INPUT_BASE-1];
+            format[6] = ALPHABET[INPUT_BASE-1];
+            // debug_printf("[[%s]]\n", format);
         }
         
         else {
@@ -389,10 +390,10 @@ int64_t input_int(void) {
         // if the string did not start with a negative sign
         if(scanf(format, &number_str) != 1) {
             sign = 1;
-            // add a space at the beginning to consume whitespace
+            // replace sign query with a space
             format[1] = ' ';
             // TODO: check when this format fails as well
-            scanf(format + 1, &number_str);
+            scanf(format, &number_str);
         }
         
         // TODO: maybe put the logic of base conversion in a function?
@@ -910,7 +911,6 @@ void OML_exec_cmd(OML* inst, char cur) {
         }
         // reduce (un-tested)
         else if(ident == '(') {
-            
             size_t start = inst->i + 1, end = start;
             // find end-point
             int depth = 1;
@@ -927,11 +927,11 @@ void OML_exec_cmd(OML* inst, char cur) {
             to_exec[res_size] = '\0';
             memcpy(to_exec, inst->code + start, res_size * sizeof(char));
             
-            // while(res->size) {
-                // OML_exec_str_stk(inst, to_exec, res);
-            // }
-            
-            // inst->stk = stack_from(temp);
+            while(res->size != 1) {
+                STACK tmp = stack_from(*res);
+                res->size = 0;
+                OML_exec_str_stk(inst, to_exec, tmp);
+            }
             
             inst->i = end;
         }
@@ -1088,11 +1088,7 @@ void OML_diagnostic(OML* inst) {
     printf(COLOR_HEADER("[END INSTANCE %p]") "\n", inst);
 }
 
-// TODO: OML_exec_str_stk
-
-void OML_exec_str_args(OML* inst, char* str, size_t argc, ...) {
-    va_list args;
-    va_start(args, argc);
+void OML_exec_str_stk(OML* inst, char* str, STACK stk) {
     OML temp = *inst;
     inst->stk = stack_init();
     inst->stk_stk = stack_init();
@@ -1100,20 +1096,29 @@ void OML_exec_str_args(OML* inst, char* str, size_t argc, ...) {
     inst->size = strlen(str);
     inst->sub_stk_size = 0;
     inst->i = 0;
-    // registers can stay
-    // initialize stack with args
-    for(size_t i = 0; i < argc; i++) {
-        int64_t n = va_arg(args, int64_t);
-        stack_push(&inst->stk, n);
+    for(size_t i = 0; i < stk.size; i++) {
+        stack_push(&inst->stk, stk.data[i]);
     }
+    // OML_diagnostic(inst);
+    // stk.size = 0;
+    // registers can stay
     OML_run(inst);
+    // OML_diagnostic(inst);
     for(size_t i = 0; i < inst->stk.size; i++) {
         stack_push(&temp.stk, inst->stk.data[i]);
     }
-    // inst->code = temp.code;
-    // inst->stk = temp.stk;
-    // inst->i = temp.i;
     *inst = temp;
+}
+
+void OML_exec_str_args(OML* inst, char* str, size_t argc, ...) {
+    va_list args;
+    va_start(args, argc);
+    STACK arg_stk = stack_init();
+    for(size_t i = 0; i < argc; i++) {
+        int64_t n = va_arg(args, int64_t);
+        stack_push(&arg_stk, n);
+    }
+    OML_exec_str_stk(inst, str, arg_stk);
 }
 
 void OML_exec_str(OML* inst, char* str) {
@@ -1179,10 +1184,18 @@ int main(int argc, char** argv) {
                     from_file = true;
                 else if(*arg == 'n')
                     over_numbers = true;
+                else if(*arg == 'o')
+                    INPUT_BASE = 8;
                 else if(*arg == 'h')
                     INPUT_BASE = 16;
                 else if(*arg == 'b')
                     INPUT_BASE = 2;
+                else if(*arg == 'O')
+                    OUTPUT_BASE = 8;
+                else if(*arg == 'H')
+                    OUTPUT_BASE = 16;
+                else if(*arg == 'B')
+                    OUTPUT_BASE = 2;
                 else if(*arg == '?') {
                     show_help(argv[0]);
                     return -1;
