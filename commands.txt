@@ -85,9 +85,9 @@ q   push output base
 r   push number of sub-stacks (depth)
 s   pop N; output string with N char codes
 t   push to next register
-u   pop from next register
-v   treat the stack as a base 2 number
-w   treat the stack as a base <output base> number
+u   treat the stack as a base 2 number
+v   treat the stack as a base <output base> number
+w   pop from next register
 x   pop N; pop K; push K N times
 y   pop N; push all the numbers from -N to N
 z   move bottom to top

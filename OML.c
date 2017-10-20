@@ -659,14 +659,12 @@ void OML_exec_cmd(OML* inst, char cur) {
         }
         free(digits);
     }
-    // BUG: this prints backwards
-    // TODO: fix that bug
     else if(cur == 'W') {
-        int64_t stream, count, i;
+        int64_t stream, count;
         stream = stack_pop(res);
-        count = i = stack_pop(res);
+        count = stack_pop(res);
         char* temp = malloc(count * sizeof(char));
-        while(i --> 0) {
+        for(size_t i = 0; i < count; i++) {
             temp[i] = stack_pop(res);
         }
         write(stream, temp, count);
@@ -834,11 +832,6 @@ void OML_exec_cmd(OML* inst, char cur) {
     }
     
     else if(cur == 'u') {
-        unsigned char ident = inst->code[++inst->i];
-        STACK* reg = &inst->reg_stk[ident];
-        stack_push(res, stack_pop(reg));
-    }
-    else if(cur == 'v') {
         int64_t sum = 0;
         size_t pos = 0;
         while(pos < res->size) {
@@ -849,7 +842,7 @@ void OML_exec_cmd(OML* inst, char cur) {
         res->size = 0;
         stack_push(res, sum);
     }
-    else if(cur == 'w') {
+    else if(cur == 'v') {
         int64_t sum = 0;
         size_t pos = 0;
         while(pos < res->size) {
@@ -859,6 +852,11 @@ void OML_exec_cmd(OML* inst, char cur) {
         }
         res->size = 0;
         stack_push(res, sum);
+    }
+    else if(cur == 'w') {
+        unsigned char ident = inst->code[++inst->i];
+        STACK* reg = &inst->reg_stk[ident];
+        stack_push(res, stack_pop(reg));
     }
     else if(cur == 'x') {
         int64_t repeater = stack_pop(res);
