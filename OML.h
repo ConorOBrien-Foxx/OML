@@ -48,6 +48,7 @@ bool    stdin_remaining (void);
 char*   read_file       (char*, size_t*);
 
 #define to_output_base(a, b) to_base(a, OUTPUT_BASE, b)
+double      random_scale    (void);
 int         is_power        (int64_t, int64_t);
 int64_t     ipow            (int64_t, int64_t);
 int64_t     icbrt           (int64_t);
@@ -68,6 +69,7 @@ OML     OML_exec            (char*, size_t);
 void    OML_run             (OML*);
 void    OML_diagnostic      (OML*);
 void    OML_exec_cmd        (OML*, char);
+void    OML_exec_str_stk    (OML*, char*, STACK);
 void    OML_exec_str_args   (OML*, char*, size_t, ...);
 void    OML_exec_str        (OML*, char*);
 #endif

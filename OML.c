@@ -10,16 +10,14 @@
 #include <ctype.h>      /* for isalpha, isalnum, etc. */
 #include <stdarg.h>     /* for va_list, va_start, va_end, va_arg */
 
-// #include "twister.h" /* for randomMT */
-
-#include "xoroshiro128plus.c" /* for next */
-#include "msdelay.h"          /* for ms_delay */
+#include "xoroshiro128plus.c"   /* for next */
+#include "msdelay.h"            /* for ms_delay */
 
 #include "OML.h"
 
 #define INITIAL_STACK_CAPACITY (16)
 #define eprintf(...) fprintf(stderr, __VA_ARGS__)
-// #define printf(...) printf("\x1b[33m[%s::%i]\x1b[0m ", __FUNCTION__, __LINE__);printf(__VA_ARGS__)
+#define debug_printf(...) printf("\x1b[33m[%s::%i]\x1b[0m ", __FUNCTION__, __LINE__);printf(__VA_ARGS__)
 
 char* read_file(char* name, size_t* out_size) {
     FILE* file = fopen(name, "r");
@@ -30,30 +28,32 @@ char* read_file(char* name, size_t* out_size) {
     size_t length;
     char* contents;
     *out_size = 0;
-    // printf("[debug] start\n");
+
     if(fseeko(file, 0, SEEK_END) != 0) {
-        // printf("[debug<seek_end] failed\n");
         return NULL;
     }
-    // printf("[debug] finding length");
+
     length = ftello(file);
+
     if(fseeko(file, 0, SEEK_SET) != 0) {
-        // printf("[debug<seek_set] failed\n");
         return NULL;
     }
-    // printf("[debug] %"PRId64"\n", length);
+
     contents = malloc(length * sizeof(char));
     fread(contents, sizeof(char), length, file);
+
     fclose(file);
+
     *out_size = length;
+
     return contents;
 }
 
 STACK stack_init(void) {
     STACK res = { INITIAL_STACK_CAPACITY, 0, NULL };
+    
     res.data = malloc(sizeof(int64_t) * res.capacity);
-    // if(!res.data)
-        // return NULL;
+
     return res;
 }
 
@@ -63,32 +63,41 @@ void stack_destroy(STACK* stk) {
 
 int stack_resize(STACK* stk) {
     void* temp = realloc(stk->data, sizeof(int64_t) * stk->capacity);
-    if(!temp) {
+    
+    if(temp == NULL) {
         return 0;
     }
+    
     stk->data = temp;
+    
     return 1;
 }
 
 int stack_push(STACK* stk, int64_t val) {
     stk->data[stk->size++] = val;
+    
     if(stk->size >= stk->capacity) {
         stk->capacity *= 2;
         return stack_resize(stk);
     }
+    
     return 1;
 }
 
 int stack_unshift(STACK* stk, int64_t val) {
     stk->size++;
+    
     if(stk->size >= stk->capacity) {
         stk->capacity *= 2;
         if(!stack_resize(stk)) {
             return 0;
         }
     }
+    
     memmove(stk->data + 1, stk->data, stk->size * sizeof(int64_t));
+    
     stk->data[0] = val;
+    
     return 1;
 }
 
@@ -103,27 +112,38 @@ int64_t stack_pop(STACK* stk) {
 
 int64_t stack_shift(STACK* stk) {
     int64_t val = stk->data[0];
+    
     stk->size--;
+    
     memmove(stk->data, stk->data + 1, stk->size * sizeof(int64_t));
+    
     return val;
 }
 
 int64_t stack_pop_from(STACK* stk, size_t index) {
-    int64_t val = stk->data[index];
+    int64_t val;
+    size_t to_move;
+    
+    val = stk->data[index];
     stk->size--;
-    size_t to_move = stk->size - index;
-    memmove(stk->data + index, stk->data + index + 1, to_move * sizeof(int64_t));    
+    
+    to_move = stk->size - index;
+    
+    memmove(stk->data + index, stk->data + index + 1, to_move * sizeof(int64_t));
+    
     return val;
 }
 
 int64_t stack_peek(STACK* stk) {
     if(stk->size == 0)
         return 0;
+    
     return stk->data[stk->size - 1];
 }
 
 void stack_display(STACK t) {
     fflush(stdout);
+    
     for(size_t i = t.size - 1; i < t.size; --i) {
         printf("%"PRId64"\n", t.data[i]);
     }
@@ -143,22 +163,29 @@ STACK stack_from(STACK stk) {
     STACK res = stack_init();
     res.size = stk.size;
     res.capacity = stk.capacity;
+    
     for(size_t i = 0; i < res.size; i++) {
         res.data[i] = stk.data[i];
     }
-    // stack_resize(&res);
-    // memcpy(&res, &stk, res.size * sizeof(int64_t));
+    
     return res;
 }
 
 bool stdin_remaining(void) {
     ungetc(getchar(), stdin);
+    
     return feof(stdin) == 0;
 }
 
-int64_t random_between(int64_t lower, int64_t upper) {
+double random_scale(void) {
     uint64_t rand_val = next();
-    double scale = rand_val * 1.0 / UINT64_MAX;
+    
+    return rand_val * 1.0 / UINT64_MAX; 
+}
+
+int64_t random_between(int64_t lower, int64_t upper) {
+    double scale = random_scale();
+    
     return (int64_t)(scale * (upper - lower)) + lower;
 }
 
@@ -166,9 +193,11 @@ int64_t factorial(int64_t n) {
     if(n < 0) {
         return 0;
     }
+    
     else if(n <= 1) {
         return 1;
     }
+    
     else {
         int64_t prod = n;
         while(n --> 1) {
@@ -225,47 +254,47 @@ int64_t isqrt(int64_t num) {
 int is_power(int64_t num, int64_t base) {
     while(num % base == 0)
         num /= base;
+    
     return num == 1;
 }
 
 int64_t* to_base(int64_t n, int64_t base, size_t* out_size) {
     double ratio = round(log(n) / log(base));
-    // printf("%"PRId64" / %"PRId64"\n", n, base);
 
     *out_size = 1 + ratio;
-    // *out_size = 1 + (log(n + 1) / log(base));
+
     size_t j = *out_size;
     int64_t* temp = malloc(j * sizeof(int64_t));
+    
     while(n > 0) {
         temp[--j] = n % base;
         n /= base;
     }
+    
+    /*
+     * When there are spaces remaining, move all the elements backward
+     * TODO: find out how to fix bug concerning some powers of the base
+     * Replicate with:
+     * 
+     *    to_base(8, 2, &i) = { 0, 0, 0 }
+     *
+     */
     if(j) {
         *out_size -= j;
         memmove(temp, temp + j, *out_size * sizeof(int64_t));
     }
+    
     return temp;
 }
 
 void print_int(int64_t n) {
     fflush(stdout);
+    
     if(n < 0) {
         putchar('-');
-        fflush(stdout);
         print_int(-n);
-    } 
-    else if(n == 0) {
-        printf("0");
     }
-    else if(n == OUTPUT_BASE) {
-        printf("10");
-    }
-    else if(OUTPUT_BASE == 10) {
-        printf("%"PRId64, n);
-    }
-    else if(OUTPUT_BASE == 16) {
-        printf("%"PRIx64, n);
-    }
+    
     else if(OUTPUT_BASE == 1) {
         fprintf(stderr, "unary isn't really a base...\n");
         int64_t t = n;
@@ -276,9 +305,25 @@ void print_int(int64_t n) {
         write(1, temp, n);
         free(temp);
     }
+    
+    else if(n == 0 || n == 1) {
+        putchar('0' + n);
+    }
+    
+    // any number equal to the output base is represented as 10
+    else if(n == OUTPUT_BASE) {
+        printf("10");
+    }
+    
+    else if(OUTPUT_BASE == 10) {
+        printf("%"PRId64, n);
+    }
+    
+    else if(OUTPUT_BASE == 16) {
+        printf("%"PRIx64, n);
+    }
+    
     else if(OUTPUT_BASE <= 36) {
-        // while(
-        //todo:base conversion
         size_t digit_count;
         int64_t* digits = to_output_base(n, &digit_count);
         char* temp = malloc(digit_count * sizeof(char));
@@ -289,9 +334,11 @@ void print_int(int64_t n) {
         free(temp);
         free(digits);
     }
+    
     else {
-        printf("output in base %i: %"PRId64, OUTPUT_BASE, n); 
+        eprintf("No output for base %i: %"PRId64, OUTPUT_BASE, n); 
     }
+    
     fflush(stdout);
 }
 
@@ -305,39 +352,52 @@ int is_valid_in_char(int c) {
 int char_to_in_digit(int c) {
     return c <= '9' ? c - '0' : c - ALPHABET[10] + 10;
 }
+
 int64_t input_int(void) {
-    char temp = getchar();
-    ungetc(temp, stdin);
     int64_t ret = 0;
+    
     if(INPUT_BASE == 10) {
         scanf(" %"SCNd64, &ret);
     }
+    
     else {
-        // fixed width is fine, since numbers can only be so long
+        // fixed width is fine, since numbers can only be so long without loss
+        // of precision
         char number_str[80] = {0};
+        // format should start with a space, to ensure that whitespace
+        // is consumed
         char* format = malloc(14 * sizeof(char));
+        
+        // assume is negative until scanf fails
         int sign = -1;
-        char dummy_sign;
+        
         if(INPUT_BASE < 9) {
-            strcpy(format, " %[-]%[0-?]");
-            format[9] = ALPHABET[INPUT_BASE-1];
-            // puts(format);
+            strcpy(format, " -[0-?]");
+            //              0123456
+            // update the question mark
+            format[5] = ALPHABET[INPUT_BASE-1];
         }
+        
         else {
-            strcpy(format, " %[-]%[0-9a-?A-?]");
-            format[12] = ALPHABET[INPUT_BASE-1];
-            format[15] = toupper(ALPHABET[INPUT_BASE-1]);
+            strcpy(format, " -%[0-9a-?A-?]");
+            //              0123456789ABCD
+            // update the two question marks; C = 12
+            format[9] = ALPHABET[INPUT_BASE-1];
+            format[12] = toupper(ALPHABET[INPUT_BASE-1]);
         }
-                
-        if(scanf(format, &dummy_sign, &number_str) != 2) {
-            // printf("dummy sign = '%c'/%i\n", dummy_sign, dummy_sign);
+        
+        // if the string did not start with a negative sign
+        if(scanf(format, &number_str) != 1) {
             sign = 1;
-            format += 4;
-            *format = ' ';
-            scanf(format, &number_str);
-            format -= 4;
+            // add a space at the beginning to consume whitespace
+            format[1] = ' ';
+            // TODO: check when this format fails as well
+            scanf(format + 1, &number_str);
         }
-        for(int pos = 0; number_str[pos]; pos++) {
+        
+        // TODO: maybe put the logic of base conversion in a function?
+        // Is there enough code to warrant that?
+        for(size_t pos = 0; number_str[pos]; pos++) {
             ret *= INPUT_BASE;
             ret += char_to_in_digit(number_str[pos]);
         }
@@ -367,8 +427,9 @@ int64_t ipow(int64_t base, int64_t exp) {
 
 void OML_exec_cmd(OML* inst, char cur) {
     STACK* res = &inst->stk;
+    
     if(cur == ' ') {
-        // no-op
+        // no-op, do nothing
     }
     else if(cur == '!') {
         int64_t a = stack_pop(res);
@@ -379,8 +440,7 @@ void OML_exec_cmd(OML* inst, char cur) {
         size_t start = inst->i;
         while(inst->i < inst->size) {
             if(inst->code[inst->i] == '"') {
-                if(inst->i + 1 >= inst->size
-                || inst->code[inst->i + 1] != '"') {
+                if(inst->i + 1 >= inst->size || inst->code[inst->i + 1] != '"') {
                     break;
                 }
             }
@@ -391,7 +451,6 @@ void OML_exec_cmd(OML* inst, char cur) {
             stack_push(res, inst->code[j]);
         }
         stack_push(res, end - start);
-        // write(1, inst->code + start, inst->i - start);
     }
     else if(cur == '#') {
         print_int(stack_pop(res));
@@ -573,7 +632,7 @@ void OML_exec_cmd(OML* inst, char cur) {
     else if(cur == 'S') {
         stack_push(res, 16);
     }
-    // from https://stackoverflow.com/a/12700533/4119004
+    // digit concatenation rom https://stackoverflow.com/a/12700533/4119004
     else if(cur == 'T') {
         int64_t x, y, pow;
         y = stack_pop(res);
@@ -600,6 +659,8 @@ void OML_exec_cmd(OML* inst, char cur) {
         }
         free(digits);
     }
+    // BUG: this prints backwards
+    // TODO: fix that bug
     else if(cur == 'W') {
         int64_t stream, count, i;
         stream = stack_pop(res);
@@ -628,7 +689,6 @@ void OML_exec_cmd(OML* inst, char cur) {
         stack_unshift(res, top);
     }
     else if(cur == '[') {
-        // inst->stk_stk
         int64_t count = stack_pop(res);
         size_t size = res->size;
         for(size_t i = 0; i < size - count; i++) {
@@ -850,7 +910,7 @@ void OML_exec_cmd(OML* inst, char cur) {
             print_int(a);
             puts("");
         }
-        // reduce
+        // reduce (un-tested)
         else if(ident == '(') {
             
             size_t start = inst->i + 1, end = start;
@@ -869,11 +929,11 @@ void OML_exec_cmd(OML* inst, char cur) {
             to_exec[res_size] = '\0';
             memcpy(to_exec, inst->code + start, res_size * sizeof(char));
             
-            while(res->size) {
-                OML_exec_str_stk(inst, to_exec, res);
-            }
+            // while(res->size) {
+                // OML_exec_str_stk(inst, to_exec, res);
+            // }
             
-            inst->stk = stack_from(temp);
+            // inst->stk = stack_from(temp);
             
             inst->i = end;
         }
@@ -1024,11 +1084,13 @@ void OML_diagnostic(OML* inst) {
     for(size_t i = 0; i < inst->i; i++) {
         putchar('-');
     }
-    printf("^ (%u)\n", inst->i);
-    printf(COLOR_SUB_HEADER("(STACK, size = %u)") "\n", inst->stk.size);
+    printf("^ (%lu)\n", (unsigned long) inst->i);
+    printf(COLOR_SUB_HEADER("(STACK, size = %lu)") "\n", (unsigned long) inst->stk.size);
     stack_display(inst->stk);
     printf(COLOR_HEADER("[END INSTANCE %p]") "\n", inst);
 }
+
+// TODO: OML_exec_str_stk
 
 void OML_exec_str_args(OML* inst, char* str, size_t argc, ...) {
     va_list args;
@@ -1057,9 +1119,6 @@ void OML_exec_str_args(OML* inst, char* str, size_t argc, ...) {
 }
 
 void OML_exec_str(OML* inst, char* str) {
-    // printf("EXECUTING: `%s`\n", str);
-    // preserve old information
-    // OML_diagnostic(inst);
     OML_exec_str_args(inst, str, 0);
 }
 
